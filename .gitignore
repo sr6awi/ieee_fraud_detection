@@ -1,0 +1,11 @@
+# Ignore data and models
+data/
+models/
+*.pkl
+*.h5
+
+# Colab/Notebook junk
+.ipynb_checkpoints/
+__pycache__/
+*.pyc
+.DS_Store
