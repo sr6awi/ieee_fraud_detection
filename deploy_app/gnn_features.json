@@ -1,0 +1,1 @@
+["TransactionAmt", "TransactionDT", "card1", "card2", "card1_count", "card1_fraud_rate", "card2_fraud_rate", "P_emaildomain_fraud_rate", "R_emaildomain_fraud_rate", "addr1", "dist1", "ProductCD", "ProductCD_fraud_rate", "transaction_hour", "is_weekend", "is_night", "TransactionAmt_log", "email_domains_match", "addr_match"]
