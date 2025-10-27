@@ -36,15 +36,22 @@ def predict(payload: FraudInput):
     row = payload.data
     df = pd.DataFrame([row])
 
+    # -------------------------------------------------------------------
+    # Handle missing features automatically
+    # -------------------------------------------------------------------
     missing_gnn = [c for c in GNN_FEATURES if c not in df.columns]
     missing_tab = [c for c in TABNET_FEATURES if c not in df.columns]
-    if missing_gnn or missing_tab:
-        return {
-            "error": "Missing required features",
-            "missing_gnn": missing_gnn,
-            "missing_tabnet": missing_tab,
-        }
 
+    # Fill any missing columns with zeros instead of returning an error
+    for col in missing_gnn + missing_tab:
+        df[col] = 0
+
+    # Reorder columns to match the model’s training order
+    df = df.reindex(columns=list(set(GNN_FEATURES + TABNET_FEATURES)), fill_value=0)
+
+    # -------------------------------------------------------------------
+    # 🔹 Prepare input for model
+    # -------------------------------------------------------------------
     X_gnn = df[GNN_FEATURES].fillna(0).to_numpy()
     X_tabnet = df[TABNET_FEATURES].fillna(0).to_numpy()
 
