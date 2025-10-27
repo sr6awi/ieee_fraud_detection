@@ -92,34 +92,36 @@ def get_risk_level(prob):
     else:
         return "LOW", "#10b981", "risk-low"
 
+
 def create_gauge(prob):
     lvl, color, _ = get_risk_level(prob)
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
-        value=prob*100,
+        value=prob * 100,
         title={'text': f"Fraud Risk: {lvl}", 'font': {'size': 22, 'color': 'white'}},
         gauge={
-            'axis': {'range': [None,100], 'tickcolor': 'white'},
+            'axis': {'range': [None, 100], 'tickcolor': 'white'},
             'bar': {'color': color, 'thickness': 0.75},
             'bgcolor': 'rgba(30,41,59,0.3)',
             'bordercolor': 'white',
             'steps': [
-                {'range': [0,20], 'color':'rgba(16,185,129,0.3)'},
-                {'range':[20,40],'color':'rgba(251,191,36,0.3)'},
-                {'range':[40,70],'color':'rgba(249,115,22,0.3)'},
-                {'range':[70,100],'color':'rgba(239,68,68,0.3)'}
+                {'range': [0, 20], 'color': 'rgba(16,185,129,0.3)'},
+                {'range': [20, 40], 'color': 'rgba(251,191,36,0.3)'},
+                {'range': [40, 70], 'color': 'rgba(249,115,22,0.3)'},
+                {'range': [70, 100], 'color': 'rgba(239,68,68,0.3)'}
             ],
         }
     ))
     fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', height=300)
     return fig
 
+
 def create_feature_chart(features):
     df = pd.DataFrame(features)
-    order = {'high':3, 'medium':2, 'low':1}
+    order = {'high': 3, 'medium': 2, 'low': 1}
     df['score'] = df['impact'].map(order)
     df = df.sort_values('score')
-    colors = {'high':'#ef4444','medium':'#fbbf24','low':'#10b981'}
+    colors = {'high': '#ef4444', 'medium': '#fbbf24', 'low': '#10b981'}
     df['color'] = df['impact'].map(colors)
     fig = go.Figure(go.Bar(
         y=df['name'], x=df['score'], orientation='h',
@@ -130,12 +132,13 @@ def create_feature_chart(features):
         title="Feature Impact Analysis",
         paper_bgcolor='rgba(0,0,0,0)',
         font_color='white', height=380,
-        xaxis=dict(tickvals=[1,2,3], ticktext=['LOW','MEDIUM','HIGH'])
+        xaxis=dict(tickvals=[1, 2, 3], ticktext=['LOW', 'MEDIUM', 'HIGH'])
     )
     return fig
 
+
 def run_prediction(data):
-    """Try real API call, fallback to mock"""
+    """Try real API call, fallback to mock, measure latency"""
     progress = st.progress(0)
     msg = st.empty()
 
@@ -200,7 +203,6 @@ def run_prediction(data):
         'features': feats
     }
 
-
 # ======================================================
 # HEADER
 # ======================================================
@@ -211,7 +213,7 @@ st.markdown("---")
 # ======================================================
 # MAIN LAYOUT
 # ======================================================
-left, right = st.columns([1,2])
+left, right = st.columns([1, 2])
 
 # ======================================================
 # LEFT PANEL — INPUT + UNSEEN DATA
@@ -222,9 +224,9 @@ with left:
         tx_data = {
             "TransactionID": st.text_input("Transaction ID", "TX_001"),
             "amount": st.number_input("Amount ($)", min_value=0.0, step=10.0, value=500.0),
-            "device_change_freq": st.slider("Device Change Frequency", 0,7,2),
-            "ip_risk_score": st.slider("IP Risk Score", 0.0,1.0,0.5,0.01),
-            "hour": st.slider("Transaction Hour", 0,23,12)
+            "device_change_freq": st.slider("Device Change Frequency", 0, 7, 2),
+            "ip_risk_score": st.slider("IP Risk Score", 0.0, 1.0, 0.5, 0.01),
+            "hour": st.slider("Transaction Hour", 0, 23, 12)
         }
         submitted = st.form_submit_button("🧠 Run Prediction", use_container_width=True)
 
@@ -240,7 +242,7 @@ with left:
         selected_row = unseen_df.iloc[sample_labels.index(selected_label)]
 
         st.markdown("#### 📋 Preview Features")
-        st.dataframe(selected_row.to_frame().T.drop(columns=['description','risk_level']), use_container_width=True)
+        st.dataframe(selected_row.to_frame().T.drop(columns=['description', 'risk_level']), use_container_width=True)
 
         if st.button("📥 Use This Sample", use_container_width=True):
             st.session_state.sample_data = {
@@ -274,21 +276,32 @@ with right:
         st.markdown(f"<div class='{css}'><h2>Fraud Risk Level:</h2><h1 style='color:{color};text-align:center;'>{lvl}</h1></div>", unsafe_allow_html=True)
         st.plotly_chart(create_gauge(res['probability']), use_container_width=True)
 
-        col1, col2, col3 = st.columns(3)
+        # 🧮 Metrics with latency indicator
+        col1, col2, col3, col4 = st.columns(4)
         col1.metric("Transaction ID", res['transaction_id'])
-        col2.metric("Confidence", f"{res['confidence']*100:.1f}%")
+        col2.metric("Confidence", f"{res['confidence'] * 100:.1f}%")
         col3.metric("Timestamp", res['timestamp'])
 
+        # Latency color feedback
+        latency_color = "🟢"
+        if res['latency_ms'] > 1000:
+            latency_color = "🔴"
+        elif res['latency_ms'] > 500:
+            latency_color = "🟠"
+
+        col4.metric("Latency", f"{res['latency_ms']:.0f} ms", latency_color)
+
+        # Feature importance
         st.plotly_chart(create_feature_chart(res['features']), use_container_width=True)
 
         if len(st.session_state.prediction_history) > 0:
             st.markdown("## 📊 Recent Predictions")
             for pred in st.session_state.prediction_history:
                 lvl, c, _ = get_risk_level(pred['probability'])
-                st.markdown(f"**{pred['transaction_id']}** — <span style='color:{c}'>{lvl}</span> ({pred['probability']*100:.1f}%)", unsafe_allow_html=True)
+                st.markdown(f"**{pred['transaction_id']}** — <span style='color:{c}'>{lvl}</span> ({pred['probability'] * 100:.1f}%)", unsafe_allow_html=True)
                 st.progress(pred['probability'])
     else:
         st.info("Enter data or choose a sample to test your model.")
 
 st.markdown("---")
-st.markdown("<div style='text-align:center; color:gray;'>🔬 Powered by FastAPI + Streamlit · Dual-Path Neural Fraud Detector · Dynamic Unseen Data Support</div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align:center; color:gray;'>🔬 Powered by FastAPI + Streamlit · Dual-Path Neural Fraud Detector · Dynamic Unseen Data Support · Latency Monitoring Enabled</div>", unsafe_allow_html=True)
