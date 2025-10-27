@@ -138,47 +138,68 @@ def run_prediction(data):
     """Try real API call, fallback to mock"""
     progress = st.progress(0)
     msg = st.empty()
+
     steps = [
         "🧠 Analyzing transaction patterns...",
         "🔍 Evaluating risk signals...",
         "⚡ Computing fraud probability...",
         "✅ Prediction complete!"
     ]
-    for i,m in enumerate(steps):
-        msg.text(m); progress.progress((i+1)*25); time.sleep(0.3)
+    for i, m in enumerate(steps):
+        msg.text(m)
+        progress.progress((i + 1) * 25)
+        time.sleep(0.3)
+
+    start_time = time.time()  # 🕒 start latency timer
+
     fraud_probability = 0
     used_api = False
+    latency_ms = 0
+
     try:
-        r = requests.post(API_URL, json={"data":data}, timeout=10)
-        if r.status_code==200:
-            pred = r.json(); fraud_probability = float(pred["fraud_probability"])
+        response = requests.post(API_URL, json={"data": data}, timeout=10)
+        latency_ms = (time.time() - start_time) * 1000  # 🕒 calculate latency in ms
+        if response.status_code == 200:
+            pred = response.json()
+            fraud_probability = float(pred["fraud_probability"])
             used_api = True
     except Exception:
-        used_api=False
+        used_api = False
+
+    # fallback if API unreachable
     if not used_api:
+        latency_ms = (time.time() - start_time) * 1000
         fraud_probability = min(
-            (data.get('device_change_freq',0)*0.25 +
-             data.get('ip_risk_score',0)*0.35 +
-             data.get('amount',0)/5000*0.25 +
-             (data.get('hour',0)/24)*0.15), 0.98)
-    msg.empty(); progress.empty()
+            (data.get('device_change_freq', 0) * 0.25 +
+             data.get('ip_risk_score', 0) * 0.35 +
+             data.get('amount', 0) / 5000 * 0.25 +
+             (data.get('hour', 0) / 24) * 0.15),
+            0.98
+        )
+
+    msg.empty()
+    progress.empty()
+
     feats = [
-        {'name':'IP Risk Score','value':data.get('ip_risk_score',0),
-         'impact':'high' if data.get('ip_risk_score',0)>0.6 else 'medium'},
-        {'name':'Device Change Freq','value':data.get('device_change_freq',0),
-         'impact':'high' if data.get('device_change_freq',0)>4 else 'medium'},
-        {'name':'Amount','value':data.get('amount',0),
-         'impact':'high' if data.get('amount',0)>1000 else 'low'},
-        {'name':'Hour','value':data.get('hour',0),
-         'impact':'medium' if data.get('hour',0) in [0,1,2,3,4] else 'low'}
+        {'name': 'IP Risk Score', 'value': data.get('ip_risk_score', 0),
+         'impact': 'high' if data.get('ip_risk_score', 0) > 0.6 else 'medium'},
+        {'name': 'Device Change Freq', 'value': data.get('device_change_freq', 0),
+         'impact': 'high' if data.get('device_change_freq', 0) > 4 else 'medium'},
+        {'name': 'Amount', 'value': data.get('amount', 0),
+         'impact': 'high' if data.get('amount', 0) > 1000 else 'low'},
+        {'name': 'Hour', 'value': data.get('hour', 0),
+         'impact': 'medium' if data.get('hour', 0) in [0, 1, 2, 3, 4] else 'low'}
     ]
+
     return {
         'transaction_id': data.get('TransactionID', f"TX_{int(time.time())}"),
         'probability': fraud_probability,
-        'confidence': 0.85 + np.random.random()*0.1,
+        'confidence': 0.85 + np.random.random() * 0.1,
         'timestamp': datetime.now().strftime("%H:%M:%S"),
+        'latency_ms': latency_ms,
         'features': feats
     }
+
 
 # ======================================================
 # HEADER
