@@ -1,0 +1,6 @@
+TransactionID,amount,device_change_freq,ip_risk_score,hour,risk_level,description
+990001,123.5,0,0.1,11,✅ Low,Routine purchase from known IP
+990002,780.2,3,0.45,22,⚠️ Medium,Evening mid-risk device switch
+990003,2490.0,6,0.91,2,🚨 Critical,Late-night high-value transaction from new device
+990004,450.0,1,0.22,15,✅ Low,Normal work-hour purchase
+990005,1390.0,4,0.71,4,⚠️ Medium,Early-morning cross-location activity
