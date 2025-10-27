@@ -7,3 +7,7 @@ lightgbm
 matplotlib
 seaborn
 pytest
+streamlit
+plotly
+requests
+numpy
